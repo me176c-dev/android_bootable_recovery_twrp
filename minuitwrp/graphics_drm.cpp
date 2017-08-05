@@ -44,9 +44,11 @@ struct drm_surface {
     uint32_t handle;
 };
 
+static drmEventContext evctx;
 static drm_surface *drm_surfaces[2];
 static int current_buffer;
 static GRSurface *draw_buf = NULL;
+static bool page_flip_pending;
 
 static bool crtc_disabled = true;
 static drmModeCrtc *main_monitor_crtc;
@@ -368,6 +370,15 @@ static void disable_non_main_crtcs(int fd,
     }
 }
 
+static void page_flip_complete(__unused int fd,
+                               __unused unsigned int sequence,
+                               __unused unsigned int tv_sec,
+                               __unused unsigned int tv_usec,
+                               __unused void *user_data) {
+    // This is called when a page flip has been completed
+    page_flip_pending = false;
+}
+
 static GRSurface* drm_init(minui_backend* backend __unused) {
     drmModeRes *res = NULL;
     uint32_t selected_mode;
@@ -478,12 +489,21 @@ static GRSurface* drm_init(minui_backend* backend __unused) {
         return NULL;
     }
 
+    // Initialize event context
+    memset(&evctx, 0, sizeof(evctx));
+    evctx.version = DRM_EVENT_CONTEXT_VERSION;
+    evctx.page_flip_handler = page_flip_complete;
+
     current_buffer = 0;
     return draw_buf;
 }
 
 static GRSurface* drm_flip(minui_backend* backend __unused) {
     int ret;
+    while (page_flip_pending) {
+        drmHandleEvent(drm_fd, &evctx);
+    }
+
     memcpy(drm_surfaces[current_buffer]->base.data,
             draw_buf->data, draw_buf->height * draw_buf->row_bytes);
 
@@ -494,8 +514,10 @@ static GRSurface* drm_flip(minui_backend* backend __unused) {
         return draw_buf;
     }
 
+    page_flip_pending = true;
     ret = drmModePageFlip(drm_fd, main_monitor_crtc->crtc_id,
-                          drm_surfaces[current_buffer]->fb_id, 0, NULL);
+                          drm_surfaces[current_buffer]->fb_id,
+                          DRM_MODE_PAGE_FLIP_EVENT, NULL);
     if (ret < 0) {
         printf("drmModePageFlip failed ret=%d\n", ret);
         return NULL;
