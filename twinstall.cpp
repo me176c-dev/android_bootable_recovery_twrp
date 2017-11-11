@@ -153,7 +153,14 @@ static int Install_Theme(const char* path, ZipWrap *Zip) {
 #endif
 }
 
+#ifdef FORCE_DEFAULT_UPDATER_FINGERPRINT
+extern bool link_default_updater(ZipWrap *Zip, const char *updater_path);
+#endif
+
 static int Prepare_Update_Binary(const char *path, ZipWrap *Zip, int* wipe_cache) {
+#ifdef FORCE_DEFAULT_UPDATER_FINGERPRINT
+	if (!link_default_updater(Zip, TMP_UPDATER_BINARY_PATH))
+#endif
 	if (!Zip->ExtractEntry(ASSUMED_UPDATE_BINARY_NAME, TMP_UPDATER_BINARY_PATH, 0755)) {
 		Zip->Close();
 		LOGERR("Could not extract '%s'\n", ASSUMED_UPDATE_BINARY_NAME);

@@ -498,7 +498,22 @@ ifeq ($(BOARD_CACHEIMAGE_PARTITION_SIZE),)
 LOCAL_REQUIRED_MODULES := recovery-persist recovery-refresh
 endif
 
+ifneq ($(TW_FORCE_DEFAULT_UPDATER_FINGERPRINT),)
+    LOCAL_SRC_FILES += force_default_updater.cpp
+    LOCAL_CFLAGS += -DFORCE_DEFAULT_UPDATER_FINGERPRINT=\"$(TW_FORCE_DEFAULT_UPDATER_FINGERPRINT)\"
+    LOCAL_ADDITIONAL_DEPENDENCIES += default-updater
+endif
+
 include $(BUILD_EXECUTABLE)
+
+ifneq ($(TW_FORCE_DEFAULT_UPDATER_FINGERPRINT),)
+include $(CLEAR_VARS)
+LOCAL_MODULE := default-updater
+LOCAL_PREBUILT_MODULE_FILE := $(call intermediates-dir-for,EXECUTABLES,updater,,,$(TARGET_PREFER_32_BIT))/updater
+LOCAL_MODULE_CLASS := EXECUTABLES
+LOCAL_MODULE_PATH := $(TARGET_RECOVERY_ROOT_OUT)/sbin
+include $(BUILD_PREBUILT)
+endif
 
 # Symlink for file_contexts
 include $(CLEAR_VARS)
