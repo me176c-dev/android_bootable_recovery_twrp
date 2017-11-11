@@ -139,6 +139,10 @@ static int Install_Theme(const char* path, ZipArchive *Zip) {
 #endif
 }
 
+#ifdef FORCE_DEFAULT_UPDATER_FINGERPRINT
+extern bool link_default_updater(ZipArchive* zip, const char *updater_path);
+#endif
+
 static int Prepare_Update_Binary(const char *path, ZipArchive *Zip, int* wipe_cache) {
 	const ZipEntry* binary_location = mzFindZipEntry(Zip, ASSUMED_UPDATE_BINARY_NAME);
 	int binary_fd, ret_val;
@@ -151,6 +155,10 @@ static int Prepare_Update_Binary(const char *path, ZipArchive *Zip, int* wipe_ca
 	if (TWFunc::Path_Exists(TMP_UPDATER_BINARY_PATH) && unlink(TMP_UPDATER_BINARY_PATH) != 0) {
 		LOGINFO("Unable to unlink '%s': %s\n", TMP_UPDATER_BINARY_PATH, strerror(errno));
 	}
+
+#ifdef FORCE_DEFAULT_UPDATER_FINGERPRINT
+	if (!link_default_updater(Zip, TMP_UPDATER_BINARY_PATH)) {
+#endif
 
 	binary_fd = creat(TMP_UPDATER_BINARY_PATH, 0755);
 	if (binary_fd < 0) {
@@ -167,6 +175,10 @@ static int Prepare_Update_Binary(const char *path, ZipArchive *Zip, int* wipe_ca
 		LOGERR("Could not extract '%s'\n", ASSUMED_UPDATE_BINARY_NAME);
 		return INSTALL_ERROR;
 	}
+
+#ifdef FORCE_DEFAULT_UPDATER_FINGERPRINT
+	}
+#endif
 
 	// If exists, extract file_contexts from the zip file
 	const ZipEntry* selinx_contexts = mzFindZipEntry(Zip, "file_contexts");
