@@ -856,6 +856,8 @@ void DataManager::SetDefaultValues()
   #endif
 #endif
 
+        mData.SetValue("tw_enable_adb_backup", "0");
+
 	pthread_mutex_unlock(&m_valuesLock);
 }
 
