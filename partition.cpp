@@ -1040,7 +1040,9 @@ bool TWPartition::Make_Dir(string Path, bool Display_Error) {
 }
 
 void TWPartition::Setup_File_System(bool Display_Error) {
-	Can_Be_Mounted = true;
+	if (!Wildcard_Block_Device) {
+		Can_Be_Mounted = true;
+	}
 	Can_Be_Wiped = true;
 
 	// Make the mount point folder if it doesn't exist

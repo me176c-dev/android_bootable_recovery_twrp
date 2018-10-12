@@ -25,6 +25,7 @@
 #include <map>
 #include <vector>
 #include <dirent.h>
+#include <fnmatch.h>
 #include <time.h>
 #include <errno.h>
 #include <fcntl.h>
@@ -2044,7 +2045,7 @@ void TWPartitionManager::Get_Partition_List(string ListType, std::vector<Partiti
 		char free_space[255];
 		string Current_Storage = DataManager::GetCurrentStoragePath();
 		for (iter = Partitions.begin(); iter != Partitions.end(); iter++) {
-			if ((*iter)->Is_Storage) {
+			if ((*iter)->Is_Storage && (*iter)->Can_Be_Mounted) {
 				struct PartitionList part;
 				sprintf(free_space, "%llu", (*iter)->Free / 1024 / 1024);
 				part.Display_Name = (*iter)->Storage_Name + " (";
@@ -2748,20 +2749,13 @@ void TWPartitionManager::Handle_Uevent(const Uevent_Block_Data& uevent_data) {
 
 	for (iter = Partitions.begin(); iter != Partitions.end(); iter++) {
 		if (!(*iter)->Sysfs_Entry.empty()) {
-			string device;
-			size_t wildcard = (*iter)->Sysfs_Entry.find("*");
-			if (wildcard != string::npos) {
-				device = (*iter)->Sysfs_Entry.substr(0, wildcard);
-			} else {
-				device = (*iter)->Sysfs_Entry;
-			}
-			if (device == uevent_data.sysfs_path.substr(0, device.size())) {
+			if (!fnmatch((*iter)->Sysfs_Entry.c_str(), uevent_data.sysfs_path.c_str(), 0)) {
 				// Found a match
 				if (uevent_data.action == "add") {
 					(*iter)->Primary_Block_Device = "/dev/block/" + uevent_data.block_device;
 					(*iter)->Alternate_Block_Device = (*iter)->Primary_Block_Device;
 					(*iter)->Is_Present = true;
-					LOGINFO("Found a match '%s' '%s'\n", uevent_data.block_device.c_str(), device.c_str());
+					LOGINFO("Found a match '%s' '%s'\n", uevent_data.block_device.c_str(), (*iter)->Sysfs_Entry.c_str());
 					if (!Decrypt_Adopted()) {
 						LOGINFO("No adopted storage so finding actual block device\n");
 						(*iter)->Find_Actual_Block_Device();
