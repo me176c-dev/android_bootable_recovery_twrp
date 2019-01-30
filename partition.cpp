@@ -2074,7 +2074,13 @@ bool TWPartition::Wipe_EXT23(string File_System) {
 
 		gui_msg(Msg("formatting_using=Formatting {1} using {2}...")(Display_Name)("mke2fs"));
 		Find_Actual_Block_Device();
-		command = "mke2fs -t " + File_System + " -m 0 " + Actual_Block_Device;
+		command = "mke2fs -t " + File_System + " -m 0 -b 4096 " + Actual_Block_Device;
+		if (!Is_Decrypted && Length != 0) {
+			// Only use length if we're not decrypted
+			unsigned long long size = IOCTL_Get_Block_Size() + Length;
+			command += " ";
+			command += std::to_string(size / 4096);
+		}
 		LOGINFO("mke2fs command: %s\n", command.c_str());
 		if (TWFunc::Exec_Cmd(command) == 0) {
 			Current_File_System = File_System;
